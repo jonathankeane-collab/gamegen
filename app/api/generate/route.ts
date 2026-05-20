@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { runStore } from '../store'
+import { generateText } from 'ai'
+import { createVercel } from '@ai-sdk/vercel'
+import { Sandbox } from '@vercel/sandbox'
 
 export const runtime = 'nodejs'
-export const maxDuration = 60
+export const maxDuration = 300
 
 export async function POST(req: NextRequest) {
   const { game, twist } = await req.json()
@@ -11,16 +13,40 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Game is required' }, { status: 400 })
   }
 
-  const runId = `run_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
-  runStore[runId] = { phase: 'workflow' }
+  try {
+    // Step 1: AI Gateway
+    const gateway = createVercel({
+      baseURL: process.env.AI_GATEWAY_URL ?? 'https://ai-gateway.vercel.sh/v1',
+      apiKey: process.env.AI_GATEWAY_TOKEN ?? '',
+    })
+    const { text } = await generateText({
+      model: gateway('claude-3-5-sonnet-20241022'),
+      system: 'You are an expert game developer. Generate a complete, self-contained HTML/JS game. Return ONLY valid HTML starting with <!DOCTYPE html>. No markdown. Dark theme. Apply the twist deeply into visuals, mechanics, and narrative.',
+      prompt: `Create a fully playable ${game} game${twist ? ` with this twist: "${twist}"` : ''}.`,
+    })
+    const gameCode = text.replace(/^```html?\n?/i, '').replace(/\n?```$/i, '').trim()
 
-  // Kick off workflow in background
-  const workflowUrl = `${req.nextUrl.origin}/api/workflow`
-  fetch(workflowUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ game, twist, runId }),
-  }).catch(console.error)
+    // Step 2: Sandbox validation
+    try {
+      const sandbox = await Sandbox.create({ runtime: 'node22' })
+      try {
+        await sandbox.runCommand({
+          cmd: 'node',
+          args: ['-e', `const c=${JSON.stringify(gameCode)};console.log(JSON.stringify({ok:/<!doctype/i.test(c),len:c.length}))`],
+        })
+      } finally {
+        await sandbox.stop().catch(() => {})
+      }
+    } catch (err) {
+      console.error('Sandbox error (non-fatal):', err)
+    }
 
-  return NextResponse.json({ runId })
+    // Return the game directly — no polling needed
+    return NextResponse.json({ html: gameCode })
+
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Generation failed'
+    console.error('Generate error:', msg)
+    return NextResponse.json({ error: msg }, { status: 500 })
+  }
 }
