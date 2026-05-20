@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { start } from 'workflow/api'
+import { gameGenWorkflow } from '../../workflow/gameGen'
 import { runStore } from '../workflow/route'
 
 export const runtime = 'nodejs'
@@ -11,16 +13,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Game is required' }, { status: 400 })
   }
 
-  const runId = `run_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+  try {
+    const run = await start(gameGenWorkflow, [{ game, twist: twist ?? '' }])
+    const runId = run.runId
 
-  // Kick off workflow in background
-  const workflowUrl = `${req.nextUrl.origin}/api/workflow`
+    // Track in store for polling
+    runStore[runId] = { phase: 'workflow' }
 
-  fetch(workflowUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ game, twist, runId }),
-  }).catch(console.error)
+    // Listen for result async
+    run.returnValue.then((html: unknown) => {
+      runStore[runId] = { phase: 'done', html: html as string }
+    }).catch((err: Error) => {
+      runStore[runId] = { phase: 'error', error: err.message }
+    })
 
-  return NextResponse.json({ runId })
+    return NextResponse.json({ runId })
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Failed to start workflow'
+    return NextResponse.json({ error: msg }, { status: 500 })
+  }
 }
