@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
       apiKey: process.env.AI_GATEWAY_TOKEN ?? '',
     })
     const { text } = await generateText({
-      model: gateway('claude-3-5-sonnet-20241022'),
+      model: gateway('anthropic/claude-sonnet-4.5'),
       system: 'You are an expert game developer. Generate a complete, self-contained HTML/JS game. Return ONLY valid HTML starting with <!DOCTYPE html>. No markdown. Dark theme. Apply the twist deeply into visuals, mechanics, and narrative.',
       prompt: `Create a fully playable ${game} game${twist ? ` with this twist: "${twist}"` : ''}.`,
     })
