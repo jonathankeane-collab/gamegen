@@ -1,0 +1,99 @@
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+
+:root {
+  --bg: #070a0f;
+  --surface: #0d1117;
+  --surface2: #161b22;
+  --border: #1e2d3d;
+  --neon-cyan: #00f5ff;
+  --neon-pink: #ff2d78;
+  --neon-yellow: #f5e642;
+  --neon-green: #39ff14;
+  --text: #c9d1d9;
+  --text-dim: #4a5568;
+  --glow-cyan: 0 0 10px #00f5ff, 0 0 30px #00f5ff40, 0 0 60px #00f5ff20;
+  --glow-pink: 0 0 10px #ff2d78, 0 0 30px #ff2d7840;
+  --glow-green: 0 0 10px #39ff14, 0 0 30px #39ff1440;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Share Tech Mono', monospace;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* CRT scanlines overlay */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.08) 2px,
+    rgba(0, 0, 0, 0.08) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* CRT vignette */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.7) 100%);
+  pointer-events: none;
+  z-index: 9998;
+}
+
+.orbitron { font-family: 'Orbitron', monospace; }
+
+/* Neon border effect */
+.neon-box {
+  border: 1px solid var(--neon-cyan);
+  box-shadow: 0 0 8px #00f5ff30, inset 0 0 8px #00f5ff10;
+}
+
+.neon-box-pink {
+  border: 1px solid var(--neon-pink);
+  box-shadow: 0 0 8px #ff2d7830, inset 0 0 8px #ff2d7810;
+}
+
+/* Flicker animation */
+@keyframes flicker {
+  0%, 95%, 100% { opacity: 1; }
+  96% { opacity: 0.8; }
+  97% { opacity: 1; }
+  98% { opacity: 0.85; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { text-shadow: var(--glow-cyan); }
+  50% { text-shadow: 0 0 20px #00f5ff, 0 0 50px #00f5ff60, 0 0 100px #00f5ff30; }
+}
+
+@keyframes scanline-move {
+  0% { top: -100%; }
+  100% { top: 100%; }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes slide-in {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes progress-fill {
+  from { width: 0%; }
+  to { width: 100%; }
+}
